@@ -622,8 +622,6 @@ workflow.add_edge("generate_response", END)
 
 # Compile the graph
 app = workflow.compile()
-app.get_graph().print_ascii()
-print("Graph compiled. Agent is ready.")
 
 
 # --- 6. Main Interaction Loop ---

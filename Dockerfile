@@ -14,20 +14,16 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # 5. Copy All Project Code
-# This copies all your .py files and your .json key
+# This copies all your .py files. The .dockerignore file prevents copying secrets.
 COPY . .
 
-# 6. Set Environment Variable for GCS
-# This tells your app where to find the GCS key inside the container.
-# Make sure this filename exactly matches your key file.
-ENV GOOGLE_APPLICATION_CREDENTIALS=genai-hackathon-476613-85268833f6b1.json
+# 6. Expose the Port
+# Tell Docker that the container will listen on port 8000.
+# Cloud Run will automatically detect this port.
+EXPOSE 8000
 
-# 7. Expose the Port
-# Tell Docker that the container will listen on port 8000
-EXPOSE 8000:8080
-
-# 8. Define the Start Command
+# 7. Define the Start Command
 # Run the API using uvicorn.
 # --host 0.0.0.0 is CRITICAL to make it accessible from outside the container.
-# We remove --reload, as that is for development only.
-CMD ["uvicorn", "api:app_api", "--host", "0.0.0.0", "--port", "8000"]
+# This command now uses the $PORT environment variable provided by Cloud Run.
+CMD exec uvicorn api:app_api --host 0.0.0.0 --port ${PORT:-8000}

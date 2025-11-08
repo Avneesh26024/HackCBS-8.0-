@@ -4,8 +4,9 @@ import uuid
 from datetime import timedelta
 
 # ---------- CONFIGURATION ----------
-# Path to your service account key
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "genai-hackathon-476613-85268833f6b1.json"
+# Path to your service account key is removed.
+# On Cloud Run, authentication is handled automatically.
+# For local development, use `gcloud auth application-default login`.
 
 # Your bucket name
 BUCKET_NAME = "hackcbs_generate_uri"  # change this
