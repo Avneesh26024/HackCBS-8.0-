@@ -158,44 +158,132 @@ class EmbeddingManager:
 
 
 # --- Example of how to use this file ---
+# [Your existing embedding_manager.py code (classes) goes here]
+# ... (GeminiEmbedder class)
+# ... (EmbeddingManager class)
+
+# --- Example of how to use this file ---
 def main():
-    # Example: Load a local SQLite DB
-    db_path = "sqlite:///example.db"  # Create a dummy db for testing
+    """
+    An elaborate test case to build and test the embedding manager.
+    This creates a 4-table schema for e-commerce.
+    """
+    db_path = "sqlite:///elaborate_test.db"  # Use a new DB file
+
+    # Clean up old DB file if it exists, for a fresh start
+    import os
+    if os.path.exists("elaborate_test.db"):
+        os.remove("elaborate_test.db")
+
+    print("--- 1. Setting up elaborate test database ('elaborate_test.db') ---")
 
     # Setup dummy data
     try:
         engine = DataEngine()
         engine.load(db_path)
-        engine.query("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name VARCHAR, age INTEGER)")
+
+        # Table 1: customers
+        engine.query("""
+        CREATE TABLE IF NOT EXISTS customers (
+            customer_id INTEGER PRIMARY KEY,
+            first_name VARCHAR(50),
+            last_name VARCHAR(50),
+            email VARCHAR(100) UNIQUE,
+            join_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""")
+
+        # Table 2: products
+        engine.query("""
+        CREATE TABLE IF NOT EXISTS products (
+            product_id INTEGER PRIMARY KEY,
+            name VARCHAR(100),
+            category VARCHAR(50),
+            price DECIMAL(10, 2)
+        )""")
+
+        # Table 3: orders
+        engine.query("""
+        CREATE TABLE IF NOT EXISTS orders (
+            order_id INTEGER PRIMARY KEY,
+            customer_id INTEGER,
+            order_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status VARCHAR(20),
+            FOREIGN KEY (customer_id) REFERENCES customers(customer_id)
+        )""")
+
+        # Table 4: order_items (the "join" table for many-to-many)
+        engine.query("""
+        CREATE TABLE IF NOT EXISTS order_items (
+            item_id INTEGER PRIMARY KEY,
+            order_id INTEGER,
+            product_id INTEGER,
+            quantity INTEGER,
+            FOREIGN KEY (order_id) REFERENCES orders(order_id),
+            FOREIGN KEY (product_id) REFERENCES products(product_id)
+        )""")
+
+        print("✅ Tables created.")
+
+        # Insert sample data
         engine.query(
-            "CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY, user_id INTEGER, item VARCHAR, FOREIGN KEY(user_id) REFERENCES users(id))")
-        engine.query("INSERT INTO users (name, age) VALUES ('Avneesh', 30), ('Jane Doe', 25)")
-        engine.query("INSERT INTO orders (user_id, item) VALUES (1, 'Laptop'), (2, 'Book')")
-        print("Dummy database created and populated.")
+            "INSERT INTO customers (first_name, last_name, email) VALUES ('Avneesh', 'User', 'avneesh@example.com'), ('Jane', 'Doe', 'jane@example.com'), ('Bob', 'Smith', 'bob@example.com')")
+        engine.query(
+            "INSERT INTO products (name, category, price) VALUES ('Laptop', 'Electronics', 1200.00), ('Mouse', 'Electronics', 25.50), ('Coffee Mug', 'Homeware', 15.00), ('Python Book', 'Books', 45.75)")
+
+        # Avneesh's order
+        engine.query("INSERT INTO orders (customer_id, status) VALUES (1, 'Shipped')")  # Order 1
+        engine.query("INSERT INTO order_items (order_id, product_id, quantity) VALUES (1, 1, 1)")  # Laptop
+        engine.query("INSERT INTO order_items (order_id, product_id, quantity) VALUES (1, 2, 1)")  # Mouse
+
+        # Jane's order
+        engine.query("INSERT INTO orders (customer_id, status) VALUES (2, 'Pending')")  # Order 2
+        engine.query("INSERT INTO order_items (order_id, product_id, quantity) VALUES (2, 4, 2)")  # 2x Python Book
+
+        # Avneesh's second order
+        engine.query("INSERT INTO orders (customer_id, status) VALUES (1, 'Delivered')")  # Order 3
+        engine.query("INSERT INTO order_items (order_id, product_id, quantity) VALUES (3, 3, 1)")  # Coffee Mug
+
+        # Bob has no orders
+
+        print("✅ Dummy database created and populated.")
+
     except Exception as e:
-        print(f"Error setting up dummy db: {e}")
+        print(f"❌ Error setting up dummy db: {e}")
         return
 
-    # 1. Connect to the data
+    # --- 2. Load the DataEngine and display structure ---
+    print("\n--- 2. Loading DataEngine and Inspecting Structure ---")
     data_engine = DataEngine()
     if not data_engine.load(db_path):
-        print("Failed to load data.")
+        print("❌ Failed to load data.")
         return
 
-    print("DataEngine loaded.")
+    print("✅ DataEngine loaded.")
     data_engine.show_database_structure()
 
-    # 2. Initialize the manager and build the stores
+    # --- 3. Build the Vector Stores ---
+    print("\n--- 3. Initializing EmbeddingManager and Building Stores ---")
     manager = EmbeddingManager(data_engine)
     manager.build_vector_stores()
 
-    # 3. Test a query
-    test_query = "How many users are there and what did they order?"
-    context = manager.query_rag_context(test_query)
+    # --- 4. Test RAG Context Retrieval ---
+    print("\n--- 4. Testing RAG Context Retrieval ---")
 
-    print("\n--- TEST RAG CONTEXT ---")
-    print(context)
-    print("------------------------")
+    test_queries = [
+        "How many total orders are there?",
+        "Show me products and their prices.",
+        "What did Avneesh buy?",
+        "Calculate the total revenue from all shipped orders.",
+        "Which customers have not placed any orders?"
+    ]
+
+    for i, test_query in enumerate(test_queries):
+        print(f"\n--- TEST QUERY {i + 1} ---")
+        print(f"Query: '{test_query}'")
+        context = manager.query_rag_context(test_query)
+        print("\n--- RAG Context Generated ---")
+        print(context)
+        print("-------------------------------")
 
 
 if __name__ == "__main__":
