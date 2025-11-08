@@ -51,7 +51,15 @@ class DataEngine:
     # ----------------------------------------------------------
     # ✅ 3. SQL DATABASE LOADER (POSTGRES / MYSQL / SQLITE / SUPABASE)
     # ----------------------------------------------------------
-    def load_sql(self, uri):
+    def load_sql(self, uri, schema=None, exclude_tables=None):
+        """
+        Load SQL database with optional schema filtering.
+        
+        Args:
+            uri: Database connection string
+            schema: Specific schema/database name to use (for MySQL/PostgreSQL)
+            exclude_tables: List of table names to exclude (e.g., system tables)
+        """
         try:
             # If user passed mysql:// without driver, prefer pymysql
             if uri.startswith("mysql://") and not uri.startswith("mysql+pymysql://"):
@@ -65,12 +73,24 @@ class DataEngine:
 
             self.duck = duckdb.connect()
             self.inspector = inspect(self.engine)
-            self.tables = self.inspector.get_table_names()
+            
+            # Get tables from specific schema if provided
+            if schema:
+                self.tables = self.inspector.get_table_names(schema=schema)
+            else:
+                self.tables = self.inspector.get_table_names()
+            
+            # Filter out excluded tables
+            if exclude_tables:
+                self.tables = [t for t in self.tables if t not in exclude_tables]
+                print(f"📋 Filtered to {len(self.tables)} tables (excluded system tables)")
 
             # Load each SQL table → DuckDB
             for table in self.tables:
                 try:
-                    df = pd.read_sql(f"SELECT * FROM {table}", self.engine)
+                    # Use schema-qualified name if schema is provided
+                    table_ref = f"{schema}.{table}" if schema else table
+                    df = pd.read_sql(f"SELECT * FROM {table_ref}", self.engine)
                     self.duck.register(table, df)
                     print(f"✓ Loaded table: {table} ({len(df)} rows)")
                 except Exception as e:
@@ -114,8 +134,15 @@ class DataEngine:
     # ----------------------------------------------------------
     # ✅ 5. AUTOMATIC LOADER
     # ----------------------------------------------------------
-    def load(self, source):
-        """Detect type and load."""
+    def load(self, source, schema=None, exclude_tables=None):
+        """
+        Detect type and load.
+        
+        Args:
+            source: File path or database URI
+            schema: Database schema name (for SQL databases only)
+            exclude_tables: List of tables to exclude (for SQL databases only)
+        """
         source = source.strip()
 
         if source.endswith(".csv"):
@@ -125,13 +152,13 @@ class DataEngine:
             return self.load_excel(source)
 
         if source.startswith("postgresql://"):
-            return self.load_sql(source)
+            return self.load_sql(source, schema=schema, exclude_tables=exclude_tables)
 
         if source.startswith("mysql://") or source.startswith("mysql+pymysql://"):
-            return self.load_sql(source)
+            return self.load_sql(source, schema=schema, exclude_tables=exclude_tables)
 
         if source.startswith("sqlite:///"):
-            return self.load_sql(source)
+            return self.load_sql(source, schema=schema, exclude_tables=exclude_tables)
 
         print("Unsupported source format:", source)
         return False

@@ -153,24 +153,49 @@ def sql_generation_node(state: AgentState) -> dict:
     """ Node 3: Generates the SQL query. """
     print("Node: sql_generation_node")
 
+    # Get list of actual user tables (filter out system tables)
+    user_tables = [t for t in data_engine.tables if t not in [
+        'column_stats', 'columns_priv', 'db', 'event', 'func', 'general_log', 
+        'global_priv', 'gtid_slave_pos', 'help_category', 'help_keyword', 
+        'help_relation', 'help_topic', 'index_stats', 'innodb_index_stats', 
+        'innodb_table_stats', 'plugin', 'proc', 'procs_priv', 'proxies_priv', 
+        'roles_mapping', 'servers', 'slow_log', 'table_stats', 'tables_priv', 
+        'time_zone', 'time_zone_leap_second', 'time_zone_name', 
+        'time_zone_transition', 'time_zone_transition_type', 'transaction_registry'
+    ]]
+    
+    query = state['current_query'].lower()
+    
+    # Handle special cases for common queries
+    if 'how many tables' in query or 'count tables' in query or 'total table' in query:
+        return {"sql_query": f"SELECT {len(user_tables)} AS table_count"}
+    
     prompt = ChatPromptTemplate.from_messages([
         ("system", """You are an expert SQL database assistant.
 Your task is to generate a single, valid SQL query to answer the user's question, based on the provided database context.
 Only output the SQL query. Do not include any other text, explanations, or markdown.
 
 CRITICAL RULES:
-1.  If the user's query is vague and could apply to multiple tables (e.g., "show me the data", "export a table"), first try to find the *most relevant* table from the context.
-2.  If it is *still* unclear, you MUST ask a clarifying question. To do this, generate the following SQL:
-    `SELECT "AMBIGUOUS_QUERY" AS error, "Which table are you referring to?" AS clarification`
-3.  The database is SQLite. Do not use functions like `DATABASE()`. For table counts, you can query `sqlite_master`.
+1.  The database uses DuckDB SQL syntax (similar to PostgreSQL). Write standard SQL queries.
+2.  Available user tables: {available_tables}
+3.  Use the table schemas and relationships provided in the context below.
+4.  For table counts or metadata, query the actual tables directly (e.g., SELECT COUNT(*) FROM table_name).
+5.  Do NOT use sqlite_master, information_schema, or DATABASE() functions.
+6.  If the user asks about "tables" (not a specific table), count available tables using DuckDB.
+7.  Always try to answer the user's question with actual data queries, not ambiguous responses.
+8.  Always use proper table and column names as shown in the context.
 
 Database Context:
 {context}"""),
         ("human", "User's Question: {query}")
-    ]).format(context=state['rag_context'], query=state['current_query'])
+    ]).format(
+        available_tables=", ".join(user_tables),
+        context=state['rag_context'], 
+        query=state['current_query']
+    )
 
     response = model.invoke(prompt)
-    sql_query = response.content.strip().replace("```sql", "").replace("```", "")
+    sql_query = response.content.strip().replace("```sql", "").replace("```", "").strip("'\"")
     print(f"Generated SQL: {sql_query}")
     return {"sql_query": sql_query}
 
@@ -597,8 +622,8 @@ workflow.add_edge("generate_response", END)
 
 # Compile the graph
 app = workflow.compile()
-# app.get_graph().print_ascii()
-# print("Graph compiled. Agent is ready.")
+app.get_graph().print_ascii()
+print("Graph compiled. Agent is ready.")
 
 
 # --- 6. Main Interaction Loop ---
@@ -610,15 +635,47 @@ def main():
     # --- Step 1: Load Data ---
     print("\n📋 Supported formats:")
     print("  CSV:        /path/to/file.csv")
+    print("  MySQL:      mysql://user:pass@host:port/database")
     print("  PostgreSQL: postgresql://user:pass@host:port/db")
-    print("  SQLite:     sqlite:///path/to/database.db (e.g., 'sqlite:///example.db')")
+    print("  SQLite:     sqlite:///path/to/database.db")
+    print("\n💡 TIP: For MySQL, use the helper to auto-filter system tables:")
+    print("  Instead of: mysql://root:Aditya@localhost:3306/mysql")
+    print("  Use the db_helpers.py functions for better control")
 
     source = input("\n🔗 Enter data source (or 'exit'): ").strip()
     if source.lower() == 'exit':
         return
 
     print(f"\n🔄 Loading {source}...")
-    if not data_engine.load(source):
+    
+    # Check if it's MySQL and offer to use the helper
+    if source.startswith("mysql://") and "/mysql" in source:
+        print("\n⚠️  WARNING: You're connecting to the MySQL system database.")
+        print("   This includes many system tables (help_*, proc, etc.)")
+        use_filter = input("   Filter out system tables? (y/n): ").strip().lower()
+        
+        if use_filter == 'y':
+            # Import the helper
+            from db_helpers import MYSQL_SYSTEM_TABLES
+            
+            # Parse the connection string
+            import re
+            match = re.match(r'mysql://([^:]+):([^@]+)@([^:]+):(\d+)/(.+)', source)
+            if match:
+                user, password, host, port, database = match.groups()
+                success = data_engine.load(
+                    source, 
+                    schema=database,
+                    exclude_tables=list(MYSQL_SYSTEM_TABLES)
+                )
+            else:
+                success = data_engine.load(source)
+        else:
+            success = data_engine.load(source)
+    else:
+        success = data_engine.load(source)
+    
+    if not success:
         print("❌ Failed to load source. Exiting.")
         return
 

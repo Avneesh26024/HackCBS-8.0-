@@ -60,6 +60,10 @@ class ChatResponse(BaseModel):
     messages: List[Message]
 
 
+class ModelGeneration3DRequest(BaseModel):
+    source: str
+
+
 # --- 3. Define API Endpoints ---
 
 @app_api.post("/upload_db", response_model=UploadResponse)
@@ -140,6 +144,31 @@ def chat(request: ChatRequest):
         response_messages.append(Message(type=msg.type, content=msg.content))
 
     return {"messages": response_messages}
+
+
+@app_api.post("/3d_generate")
+def generate_3d_model(request: ModelGeneration3DRequest):
+    """
+    Generates a structured database schema JSON from a data source connection string.
+    This is used for 3D visualization on the frontend.
+    """
+    print(f"--- Generating 3D schema for source: {request.source} ---")
+    try:
+        engine = DataEngine()
+        if not engine.load(request.source):
+            raise HTTPException(status_code=400, detail="Failed to load data source.")
+
+        manager = EmbeddingManager(engine)
+        schema_json = manager.generate_structured_schema_json()
+
+        if not schema_json:
+            raise HTTPException(status_code=500, detail="Failed to generate structured schema from the data source.")
+
+        return schema_json
+    except Exception as e:
+        # Catch any other unexpected errors
+        print(f"Error in /3d_generate: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

@@ -12,17 +12,15 @@ BUCKET_NAME = "hackcbs_generate_uri"  # change this
 # ----------------------------------
 
 
-def upload_to_gcs(file_path: str, make_public: bool = True, signed_url: bool = False):
+def upload_to_gcs(file_path: str):
     """
-    Uploads a file to Google Cloud Storage and returns its URI.
+    Uploads a file to Google Cloud Storage and returns a temporary signed URL.
 
     Args:
-        file_path (str): Local path of the image to upload.
-        make_public (bool): If True, makes the file publicly accessible.
-        signed_url (bool): If True, generates a temporary signed URL.
+        file_path (str): Local path of the file to upload.
 
     Returns:
-        str: The public or signed URL of the uploaded file.
+        str: The signed URL of the uploaded file, valid for 1 hour.
     """
     try:
         # Initialize GCS client
@@ -38,18 +36,13 @@ def upload_to_gcs(file_path: str, make_public: bool = True, signed_url: bool = F
         # Upload file
         blob.upload_from_filename(file_path)
 
-        if signed_url:
-            # Generate a temporary signed URL (1 hour validity)
-            url = blob.generate_signed_url(expiration=timedelta(hours=1))
-            return url
-
-        elif make_public:
-            blob.make_public()
-            return blob.public_url
-
-        else:
-            # Return the gs:// URI
-            return f"gs://{BUCKET_NAME}/{blob_name}"
+        # Generate a temporary signed URL (1 hour validity)
+        url = blob.generate_signed_url(
+            version="v4",
+            expiration=timedelta(hours=1),
+            method="GET"
+        )
+        return url
 
     except Exception as e:
         return f"Error uploading file: {e}"
@@ -57,9 +50,12 @@ def upload_to_gcs(file_path: str, make_public: bool = True, signed_url: bool = F
 
 # ---------- Example Usage ----------
 if __name__ == "__main__":
-    local_path = input("Enter the path to your image: ").strip()
+    local_path = input("Enter the path to your file: ").strip()
 
-    # Example: Return a public URI
-    uri = upload_to_gcs(local_path, make_public=True)
-    print("File uploaded successfully!")
-    print("URI:", uri)
+    if os.path.exists(local_path):
+        # Example: Return a signed URL
+        uri = upload_to_gcs(local_path)
+        print("File uploaded successfully!")
+        print("Signed URL (valid for 1 hour):", uri)
+    else:
+        print("File not found.")

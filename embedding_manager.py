@@ -2,15 +2,17 @@
 
 import chromadb
 import pandas as pd
+import json
 from chromadb.utils import embedding_functions
 from typing import List, Dict, Any
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from query_tool import DataEngine
-from utils import get_embeddding
+from utils import get_embedding
 
 
 # 1. Create a custom embedding function for ChromaDB
-#    This wrapper allows ChromaDB to use your 'get_embeddding' function
+#    This wrapper allows ChromaDB to use your 'get_embedding' function
 class GeminiEmbedder(embedding_functions.EmbeddingFunction):
     def __init__(self):
         # We don't need to pass the client here,
@@ -18,8 +20,8 @@ class GeminiEmbedder(embedding_functions.EmbeddingFunction):
         pass
 
     def __call__(self, input: List[str]) -> List[List[float]]:
-        # Our get_embeddding function is already batch-capable
-        return get_embeddding(input)
+        # Our get_embedding function is already batch-capable
+        return get_embedding(input)
 
 
 # 2. Main Manager Class
@@ -29,6 +31,20 @@ class EmbeddingManager:
         self.client = chromadb.PersistentClient(path="./db_vector_stores")  # Stores on disk
         self.embedder = GeminiEmbedder()
         self.data_engine = data_engine
+
+        # Delete existing collections to avoid dimension mismatch
+        # This ensures clean slate with correct embedding dimensions
+        try:
+            self.client.delete_collection(name="table_schemas")
+            print("  Deleted existing 'table_schemas' collection")
+        except:
+            pass
+        
+        try:
+            self.client.delete_collection(name="relationships")
+            print("  Deleted existing 'relationships' collection")
+        except:
+            pass
 
         # Create the two collections as requested
         self.schema_collection = self.client.get_or_create_collection(
@@ -41,6 +57,171 @@ class EmbeddingManager:
         )
         print("ChromaDB collections 'table_schemas' and 'relationships' are ready.")
 
+    def generate_structured_schema_json(self) -> Dict[str, Any]:
+        """
+        Uses LLM to generate a structured JSON output containing:
+        - Database metadata
+        - Table schemas with columns
+        - Relationships in the exact format specified
+        
+        Returns:
+            Dict containing 'metadata', 'tables', and 'relationships'
+        """
+        print("\n🤖 Generating structured schema JSON using LLM...")
+        
+        # Initialize the LLM model
+        from dotenv import load_dotenv
+        import os
+        load_dotenv()
+        
+        if not os.environ.get("GOOGLE_API_KEY"):
+            print("❌ GOOGLE_API_KEY not found. Cannot generate structured schema.")
+            return {}
+
+        model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0, thinking_budget=0)
+
+        # Filter out system tables
+        system_tables = {
+            'column_stats', 'columns_priv', 'db', 'event', 'func', 'general_log',
+            'global_priv', 'gtid_slave_pos', 'help_category', 'help_keyword',
+            'help_relation', 'help_topic', 'index_stats', 'innodb_index_stats',
+            'innodb_table_stats', 'plugin', 'proc', 'procs_priv', 'proxies_priv',
+            'roles_mapping', 'servers', 'slow_log', 'table_stats', 'tables_priv',
+            'time_zone', 'time_zone_leap_second', 'time_zone_name',
+            'time_zone_transition', 'time_zone_transition_type', 'transaction_registry'
+        }
+        
+        user_tables = [t for t in self.data_engine.tables if t not in system_tables]
+        
+        # Gather all schema information
+        all_tables_info = []
+        for table_name in user_tables:
+            schema_df = self.data_engine.get_schema(table_name)
+            sample_df = self.data_engine.query(f"SELECT * FROM {table_name} LIMIT 3")
+            
+            all_tables_info.append({
+                "table_name": table_name,
+                "schema": schema_df.to_string(),
+                "sample_rows": sample_df.to_string() if sample_df is not None and not sample_df.empty else "No data"
+            })
+        
+        # Gather relationship information
+        relationships_info = []
+        for rel in self.data_engine.relationships:
+            relationships_info.append({
+                "from_table": rel['from_table'],
+                "from_columns": rel['from_columns'],
+                "to_table": rel['to_table'],
+                "to_columns": rel['to_columns'],
+                "constraint": rel.get('constraint', 'unknown')
+            })
+        
+        # Create the prompt for LLM
+        prompt = f"""You are a database schema analyzer. Your task is to generate a structured JSON output describing a database schema.
+
+*Database Information:*
+
+Tables ({len(all_tables_info)} total):
+{json.dumps(all_tables_info, indent=2)}
+
+Relationships ({len(relationships_info)} total):
+{json.dumps(relationships_info, indent=2)}
+
+*Your Task:*
+Generate a JSON object with the following EXACT structure:
+
+{{
+  "schema_name": "[infer from data or use 'database']",
+  "nodes": [
+    {{
+      "id": "table_[table_name]",
+      "name": "[table_name]",
+      "attributes": [
+        {{
+          "name": "[column_name]",
+          "dataType": "[data_type]",
+          "key": "PK" or "FK" or null
+        }}
+      ]
+    }}
+  ],
+  "edges": [
+    {{
+      "id": "rel_[descriptive_id]",
+      "source": "table_[source_table]",
+      "target": "table_[target_table]",
+      "label": "1:N" or "1:1" or "N:M",
+      "join": {{
+        "source_column": "[source_column_name]",
+        "target_column": "[target_column_name]"
+      }}
+    }}
+  ]
+}}
+
+*CRITICAL RULES:*
+1. Use "table_" prefix for all node IDs (e.g., "table_customers", "table_orders")
+2. Use "rel_" prefix for all edge IDs (e.g., "rel_customer_order")
+3. For attributes, set "key" to "PK" for primary keys, "FK" for foreign keys, or null for regular columns
+4. Determine cardinality labels as "1:N" (one-to-many), "1:1" (one-to-one), or "N:M" (many-to-many)
+5. Analyze the relationships to infer the cardinality based on foreign keys
+6. Output ONLY the JSON object, no additional text or markdown
+7. Ensure all JSON is valid and properly formatted
+
+Generate the JSON now:"""
+
+        try:
+            # Call the LLM
+            response = model.invoke(prompt)
+            response_text = response.content.strip()
+            
+            # Clean up markdown code blocks if present
+            if response_text.startswith("```json"):
+                response_text = response_text.replace("```json", "").replace("```", "").strip()
+            elif response_text.startswith("```"):
+                response_text = response_text.replace("```", "").strip()
+            
+            # Parse the JSON
+            structured_data = json.loads(response_text)
+            
+            print("✅ Structured schema JSON generated successfully!")
+            return structured_data
+            
+        except json.JSONDecodeError as e:
+            print(f"❌ Error parsing LLM response as JSON: {e}")
+            print(f"LLM Response:\n{response_text}")
+            return {}
+        except Exception as e:
+            print(f"❌ Error generating structured schema: {e}")
+            return {}
+
+    def save_structured_schema_to_file(self, output_path: str = "database_schema.json") -> bool:
+        """
+        Generates structured schema JSON and saves it to a file.
+        
+        Args:
+            output_path: Path where the JSON file will be saved
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        structured_data = self.generate_structured_schema_json()
+        
+        if not structured_data:
+            print("❌ No data to save.")
+            return False
+        
+        try:
+            with open(output_path, 'w', encoding='utf-8') as f:
+                json.dump(structured_data, f, indent=2, ensure_ascii=False)
+            
+            print(f"✅ Structured schema saved to: {output_path}")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error saving schema to file: {e}")
+            return False
+
     def build_vector_stores(self):
         """
         Populates both vector stores based on the DataEngine's loaded data.
@@ -48,13 +229,26 @@ class EmbeddingManager:
         """
         print("Building vector stores...")
 
+        # Filter out MySQL system tables
+        system_tables = {
+            'column_stats', 'columns_priv', 'db', 'event', 'func', 'general_log',
+            'global_priv', 'gtid_slave_pos', 'help_category', 'help_keyword',
+            'help_relation', 'help_topic', 'index_stats', 'innodb_index_stats',
+            'innodb_table_stats', 'plugin', 'proc', 'procs_priv', 'proxies_priv',
+            'roles_mapping', 'servers', 'slow_log', 'table_stats', 'tables_priv',
+            'time_zone', 'time_zone_leap_second', 'time_zone_name',
+            'time_zone_transition', 'time_zone_transition_type', 'transaction_registry'
+        }
+        
+        user_tables = [t for t in self.data_engine.tables if t not in system_tables]
+
         # --- 1. Process Table Schemas (as per diagram) ---
-        print(f"Processing {len(self.data_engine.tables)} tables...")
+        print(f"Processing {len(user_tables)} user tables (filtered from {len(self.data_engine.tables)} total)...")
         table_docs = []
         table_metadatas = []
         table_ids = []
 
-        for i, table_name in enumerate(self.data_engine.tables):
+        for i, table_name in enumerate(user_tables):
             # Get schema
             schema_df = self.data_engine.get_schema(table_name)
             schema_str = schema_df.to_string()
@@ -168,7 +362,7 @@ def main():
     An elaborate test case to build and test the embedding manager.
     This creates a 4-table schema for e-commerce.
     """
-    db_path = "sqlite:///elaborate_test.db"  # Use a new DB file
+    db_path = "mysql://root:Aditya@localhost:3306/mysql"  # Use a new DB file
 
     # Clean up old DB file if it exists, for a fresh start
     import os
@@ -287,4 +481,51 @@ def main():
 
 
 if __name__ == "__main__":
+    # Uncomment the function you want to run:
+    
+    # Option 1: Run the original test (creates dummy database)
+    # main()
+    
+    # Option 2: Test the new structured schema generation
+    # test_structured_schema_generation()
+    
     main()
+
+
+def test_structured_schema_generation():
+    """
+    Test the new structured schema JSON generation feature.
+    """
+    print("="*60)
+    print("TESTING STRUCTURED SCHEMA GENERATION")
+    print("="*60)
+    
+    # Load an existing database (or use the one from main())
+    db_path = "elaborate_test.db"  # or your MySQL connection string
+    
+    print("\n--- 1. Loading DataEngine ---")
+    data_engine = DataEngine()
+    if not data_engine.load(db_path):
+        print("❌ Failed to load data.")
+        return
+    
+    print("✅ DataEngine loaded.")
+    data_engine.show_database_structure()
+    
+    # Initialize EmbeddingManager
+    print("\n--- 2. Initializing EmbeddingManager ---")
+    manager = EmbeddingManager(data_engine)
+    
+    # Generate structured schema
+    print("\n--- 3. Generating Structured Schema JSON ---")
+    schema_json = manager.generate_structured_schema_json()
+    
+    if schema_json:
+        print("\n--- 4. Generated Schema ---")
+        print(json.dumps(schema_json, indent=2))
+        
+        # Save to file
+        print("\n--- 5. Saving to File ---")
+        manager.save_structured_schema_to_file("database_schema.json")
+    else:
+        print("❌ Failed to generate schema JSON.")

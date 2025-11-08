@@ -19,7 +19,7 @@ client = OpenAI(
 )
 
 
-def get_embeddding(texts: List[str]) -> List[List[float]]:
+def get_embedding(texts: List[str]) -> List[List[float]]:
     """
     Gets embeddings for a list of texts using OpenRouter.
     """
