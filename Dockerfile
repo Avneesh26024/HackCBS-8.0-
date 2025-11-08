@@ -24,7 +24,7 @@ ENV GOOGLE_APPLICATION_CREDENTIALS=genai-hackathon-476613-85268833f6b1.json
 
 # 7. Expose the Port
 # Tell Docker that the container will listen on port 8000
-EXPOSE 8000
+EXPOSE 8000:8080
 
 # 8. Define the Start Command
 # Run the API using uvicorn.
