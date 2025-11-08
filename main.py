@@ -476,8 +476,13 @@ def final_response_node(state: AgentState) -> dict:
         # 3. Add execution details
         output_parts.append("\n---\n## ⚙️ Execution Details\n")
         output_parts.append(f"**SQL Query:**\n```sql\n{sql_query}\n```\n")
-        output_parts.append(
-            f"**Raw Data Output (first 10 rows):**\n```\n{state['sql_result_df'].head(10).to_string()}\n```\n")
+
+        # Check if DataFrame exists before calling .head()
+        if state['sql_result_df'] is not None and not state['sql_result_df'].empty:
+            output_parts.append(
+                f"**Raw Data Output (first 10 rows):**\n```\n{state['sql_result_df'].head(10).to_string()}\n```\n")
+        else:
+            output_parts.append(f"**Raw Data Output:**\n```\n{sql_result_str}\n```\n")
 
         if analysis_code:
             output_parts.append(f"**Analysis Code:**\n```python\n{analysis_code}\n```\n")
@@ -621,6 +626,57 @@ def main():
     data_engine.show_database_structure()
 
     # ---
+    # Step 2: Build Vector Stores ---
+    print("\n🧠 Building RAG vector stores for this data source...")
+    embedding_manager = EmbeddingManager(data_engine)
+    embedding_manager.build_vector_stores()
+    print("✅ RAG system is online.")
 
-if __name__=="__main__":
+    # --- Step 3: Chat Loop ---
+    print("\n💬 Chat with your data! (Type 'exit' to quit)")
+
+    # Initialize state with an empty message list
+    current_state = {"messages": []}
+
+    while True:
+        query = input("\nYou: ")
+        if query.lower() == 'exit':
+            print("\n👋 Goodbye!")
+            break
+
+        # Add the new human message to the *current* state
+        current_state["messages"].append(HumanMessage(content=query))
+
+        # We must reset the computed fields on each new query
+        # This prevents state from "leaking" between runs
+        # We only keep 'messages'
+        current_state = {
+            "messages": current_state["messages"]
+        }
+
+        # Invoke the graph with the *updated* state
+        final_state = app.invoke(current_state)
+
+        # The 'final_state' contains the *entire* history,
+        # including the new AI response.
+        ai_response = final_state['messages'][-1].content
+        print(f"\nAI: {ai_response}")
+
+        # The 'final_state' becomes the 'current_state' for the next loop,
+        # preserving the chat history.
+        current_state = final_state
+
+
+if __name__ == "__main__":
+    try:
+        # --- UPDATED DB ---
+        if not os.path.exists("elaborate_test.db"):
+            print("Creating 'elaborate_test.db' for first-time run...")
+            from embedding_manager import main as create_dummy_db
+
+            create_dummy_db()
+            print("Dummy 'elaborate_test.db' created.")
+    except Exception as e:
+        print(f"Could not create dummy db: {e}")
+
     main()
