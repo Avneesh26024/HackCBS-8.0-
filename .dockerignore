@@ -1,4 +1,4 @@
-# .gitignore
+# .dockerignore
 
 # --- Python ---
 .venv/
@@ -7,12 +7,8 @@ __pycache__/
 
 # --- Secrets ---
 .env
-*.json
 
 # --- Local Data ---
 *.db
 db_vector_stores/
 results/
-
-# --- IDE ---
-.idea/

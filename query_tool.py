@@ -1,3 +1,5 @@
+# query_tool.py
+
 import pandas as pd
 import duckdb
 from sqlalchemy import create_engine, inspect, text, MetaData, Table
@@ -225,7 +227,7 @@ class DataEngine:
         table_info = []
         for table in self.tables:
             if self.source_type == "sql":
-                row_count = pd.read_sql(f"SELECT COUNT(*) as cnt FROM {table}", self.engine).iloc[0, 0]
+                row_count = int(pd.read_sql(f"SELECT COUNT(*) as cnt FROM {table}", self.engine).iloc[0, 0])
                 col_count = len(self.inspector.get_columns(table))
                 fk_count = len(self.inspector.get_foreign_keys(table))
             else:
@@ -297,6 +299,45 @@ class DataEngine:
         except Exception as e:
             print("Query Error:", e)
             return None
+
+    # ----------------------------------------------------------
+    # ✅ NEW: GET DATABASE STRUCTURE AS DICT
+    # THIS IS THE CORRECTED FUNCTION
+    # ----------------------------------------------------------
+    def get_database_structure_dict(self):
+        """Show all tables with row counts and relationships."""
+        try:
+            structure = {
+                "tables": [],
+                "relationships": self.relationships
+            }
+
+            for table in self.tables:
+                if self.source_type == "sql":
+                    # --- THIS IS THE FIXED LINE ---
+                    row_count = int(pd.read_sql(f"SELECT COUNT(*) as cnt FROM {table}", self.engine).iloc[0, 0])
+                    # --- END OF FIX ---
+
+                    col_count = len(self.inspector.get_columns(table))
+                    fk_count = len(self.inspector.get_foreign_keys(table))
+                else:
+                    df = self.duck.execute(f"SELECT * FROM {table}").fetchdf()
+                    row_count = len(df)
+                    col_count = len(df.columns)
+                    fk_count = 0
+
+                structure["tables"].append({
+                    "name": table,
+                    "columns": col_count,
+                    "rows": row_count,
+                    "foreign_keys": fk_count
+                })
+
+            return structure
+
+        except Exception as e:
+            print(f"Error getting database structure: {e}")
+            return {"error": str(e)}
 
 
 # --------------------------------------------------
@@ -401,7 +442,7 @@ def main():
                     parts = query.split()
                     if len(parts) > 1:
                         table = parts[1]
-                        print(f"\n� Schema for '{table}':")
+                        print(f"\n Schema for '{table}':")
                         schema = engine.get_schema(table)
                         if schema is not None:
                             print(tabulate(schema, headers='keys', tablefmt='grid', showindex=False))

@@ -1,0 +1,25 @@
+# --- API ---
+fastapi
+uvicorn[standard]
+python-dotenv
+ujson==5.11.0
+
+# --- Data & SQL ---
+pandas
+duckdb
+sqlalchemy
+psycopg2-binary
+openpyxl
+tabulate
+
+# --- AI & LangChain ---
+langchain-google-genai
+langchain-core
+langgraph
+openai
+chromadb
+
+# --- File Generation & Cloud ---
+matplotlib
+fpdf
+google-cloud-storage
