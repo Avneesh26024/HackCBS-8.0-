@@ -7,7 +7,7 @@
 
 > Transform your database into a conversational AI assistant. Ask questions in natural language, get instant insights, visualizations, and exports—no SQL required.
 
-**[🚀 Live Demo](https://prism-ai-analytics.web.app)** | **[📖 Documentation](#getting-started)** | **[🎥 Demo Video](#)**
+**[🚀 Live Demo](https://db-agent-api-service-698063521469.asia-south1.run.app/docs)** | **[📖 Documentation](#getting-started)** | **[🎥 Demo Video](#)**
 
 ---
 
