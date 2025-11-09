@@ -18,7 +18,7 @@
 | **Avneesh** | Backend &  AI Engineer| [@Avneesh26024](https://github.com/Avneesh26024) |
 | **Jastej Singh** | Full Stack Engineer| [@JastejS28](https://github.com/JastejS28) |
 | **Aditya Channa** | Database & AI Engineer | [@aditya](https://github.com/adityachanna) |
-| **Harshit Chaudhry** | rontend & UI/UX  | [@adityasah](https://github.com/adityachanna) |
+| **Harshit Chaudhry** | Frontend & UI/UX  | [@adityasah](https://github.com/harshitchaudhry000) |
 ---
 
 ## 🎯 The Problem: Data Accessibility Crisis
