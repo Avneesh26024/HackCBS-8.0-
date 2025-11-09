@@ -1,427 +1,276 @@
-# AI-Driven DB RAG & Analytics
+# 🔮 Prism - AI-Driven Database Analytics
 
-An intelligent data assistant that understands your database schema and answers natural-language queries. Generate live visualizations, detect anomalies, deliver insights, and export results to PDF/Excel — all powered by custom RAG (Retrieval Augmented Generation).
+[![HackCBS 8.0](https://img.shields.io/badge/HackCBS-8.0-blue?style=flat-square)](https://github.com/Avneesh26024/HackCBS-8.0-)
+[![Python](https://img.shields.io/badge/Python-3.9+-green?style=flat-square)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Latest-teal?style=flat-square)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18+-blue?style=flat-square)](https://reactjs.org/)
 
+> Transform your database into a conversational AI assistant. Ask questions in natural language, get instant insights, visualizations, and exports—no SQL required.
 
-## Live Demo
-**[Try it now → Prism]()**
+**[🚀 Live Demo](https://prism-ai-analytics.web.app)** | **[📖 Documentation](#getting-started)** | **[🎥 Demo Video](#)**
 
-## Table of Contents
-- [Overview](#overview)
-- [Features](#features)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Getting Started](#getting-started)
-- [Project Structure](#project-structure)
-- [API Endpoints](#api-endpoints)
-- [Usage Examples](#usage-examples)
-- [Deployment](#deployment)
-- [Judging Criteria Alignment](#judging-criteria-alignment)
-- [Contributing](#contributing)
-- [License](#license)
+---
 
-## Overview
-This project transforms how users interact with databases by providing a conversational AI interface that:
-- Understands database schemas through intelligent embeddings
-- Generates SQL queries from natural language
-- Creates visualizations and performs statistical analysis
-- Exports results in multiple formats (PDF, Excel)
-- Maintains conversation context for follow-up questions
+## 👥 Team MI-7
 
-**Problem Statement**: Create an AI-powered data assistant that understands a user's database schema and answers natural-language queries. Generate live visualizations, detect anomalies, deliver insights, and export results to PDF/Excel — powered by custom RAG.
+| Member | Role | GitHub |
+|--------|------|--------|
+| **Avneesh Kumar** | Backend & AI Agent | [@Avneesh26024](https://github.com/Avneesh26024) |
+| **Jastej Singh** | Frontend & UI/UX | [@JastejS28](https://github.com/JastejS28) |
+| **Aditya Sah** | Database & Infrastructure | [@adityasah](https://github.com/adityasah) |
 
-## Features
+---
 
-### Intelligent Query Understanding
-- Natural language to SQL conversion
-- Context-aware query generation using RAG
-- Support for complex joins and aggregations
-- Schema relationship understanding
-- Multi-turn conversation with memory
+## 🎯 The Problem: Data Accessibility Crisis
 
-### Visual Analytics
-- Automatic plot generation (scatter, bar, line, histogram)
-- Statistical analysis (correlation, skewness, anomaly detection)
-- AI-powered visual interpretation using Gemini Vision
-- Interactive chart rendering
-- Real-time data visualization
+Most organizations struggle with data accessibility:
+- **Technical Barrier**: 85% of business users can't write SQL
+- **Time Waste**: Data analysts spend 40% of time on repetitive queries
+- **Limited Access**: Critical insights locked behind complex database schemas
 
-### Multi-Format Export
-- PDF reports with formatted tables
-- Excel spreadsheets with preserved data types
-- Cloud-hosted files with temporary signed URLs
-- Automatic file management
-- One-click download links
+**Our Solution**: Prism democratizes data access through conversational AI, RAG-powered schema understanding, and automated analytics.
 
-### Universal Database Support
-- **PostgreSQL** - Full support with schema introspection
-- **MySQL** - Native driver with system table filtering
-- **SQLite** - Lightweight embedded database support
-- **CSV/Excel** - Direct file analysis
-- **Supabase** - Cloud database integration
+---
 
-### Advanced RAG System
-- Dual-collection vector store (schemas + relationships)
-- ChromaDB for efficient similarity search
-- Gemini embeddings for semantic understanding
-- Context-aware retrieval with 3 top results
-- Automatic schema documentation
+## ✨ Key Features
 
-### Conversational Interface
-- Multi-turn conversations with full history
-- Follow-up question handling
-- Intent classification (new query vs. history answer)
-- Natural language responses
-- Markdown-formatted outputs
+### 🤖 Intelligent Query Understanding
+- Natural language to SQL conversion using Gemini 2.5 Flash
+- RAG-based schema comprehension with ChromaDB
+- Multi-turn conversations with full context memory
+- Support for complex joins, aggregations, and relationships
 
-## Architecture
+### 📊 Automated Analytics
+- **Statistical Analysis**: Correlation, skewness, anomaly detection
+- **Dynamic Visualizations**: Scatter plots, bar charts, line graphs, histograms
+- **AI Vision Analysis**: Gemini Vision interprets plots and provides insights
+- **Smart Export**: One-click PDF reports and Excel downloads
 
-### System Overview
+### 🗄️ Universal Database Support
+- **SQL**: PostgreSQL, MySQL, SQLite, Supabase
+- **Files**: CSV, Excel (XLSX/XLS)
+- **Schema Auto-Discovery**: Automatic foreign key detection
+- **Cloud-Ready**: Deployed on Google Cloud Run
+
+### 🧠 Advanced RAG Architecture
+- **Dual-Vector Store**: Separate collections for schemas and relationships
+- **Semantic Search**: Gemini embeddings for context retrieval
+- **Top-3 Results**: Precision-optimized RAG retrieval
+- **Auto-Documentation**: Schema introspection and metadata extraction
+
+---
+
+## 🏗️ Architecture
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     Frontend (React + Firebase)                     │
-│                                                                     │
-│    ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐    │
-│    │    Firebase     │  │    Firebase     │  │     Chat UI     │    │
-│    │      Auth       │  │   Firestore     │  │   Component     │    │
-│    │  (User Login)   │  │ (Chat History)  │  │  (Interface)    │    │
-│    └─────────────────┘  └─────────────────┘  └─────────────────┘    │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    │ REST API (HTTPS)
-                                    │
-                                    ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                Backend (FastAPI on Google Cloud Run)                │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐    │
-│  │                   LangGraph Agent Workflow                  │    │
-│  │                                                             │    │
-│  │  ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐  │    │
-│  │  │  Intent  │ → │   RAG    │ → │   SQL    │ → │ Analysis │  │    │
-│  │  │ Classify │   │ Retrieval│   │   Gen    │   │ & Plot   │  │    │
-│  │  └──────────┘   └──────────┘   └──────────┘   └──────────┘  │    │
-│  │                                                             │    │
-│  │  ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐  │    │
-│  │  │  Router  │ → │  Vision  │ → │  Export  │ → │ Response │  │    │
-│  │  │  Logic   │   │ Analysis │   │  Check   │   │ Generate │  │    │
-│  │  └──────────┘   └──────────┘   └──────────┘   └──────────┘  │    │
-│  │                                                             │    │
-│  └─────────────────────────────────────────────────────────────┘    │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-                                    │
-                ┌───────────────────┼───────────────────┐
-                │                   │                   │
-                ▼                   ▼                   ▼
-    ┌───────────────────┐ ┌───────────────────┐ ┌───────────────────┐
-    │    ChromaDB       │ │   Data Engine     │ │  Google Cloud     │
-    │ (Vector Store)    │ │  (Query Engine)   │ │    Storage        │
-    │                   │ │                   │ │                   │
-    │ • Table Schemas   │ │ • DuckDB          │ │ • Plot Images     │
-    │ • Relationships   │ │ • SQLAlchemy      │ │ • PDF Reports     │
-    │ • Embeddings      │ │ • Multi-DB        │ │ • Excel Files     │
-    │                   │ │   Support         │ │ • Signed URLs     │
-    └───────────────────┘ └───────────────────┘ └───────────────────┘
-
+┌─────────────────────────────────────────────────────────┐
+│               Frontend (React + Firebase)               │
+│  • Firebase Auth  • Firestore (Chat)  • Hosted UI      │
+└────────────────────┬────────────────────────────────────┘
+                     │ HTTPS/REST API
+                     ▼
+┌─────────────────────────────────────────────────────────┐
+│          Backend (FastAPI on Cloud Run)                 │
+│                                                          │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │         LangGraph Agent Workflow (10 Nodes)       │  │
+│  │  Intent → RAG → SQL Gen → Execute → Analyze      │  │
+│  │  → Vision → Export → Response                     │  │
+│  └───────────────────────────────────────────────────┘  │
+└────────────────────┬────────────────────────────────────┘
+                     │
+      ┌──────────────┼──────────────┐
+      ▼              ▼              ▼
+┌──────────┐  ┌──────────┐  ┌──────────────┐
+│ ChromaDB │  │  DuckDB  │  │  GCS Storage │
+│ (Vectors)│  │ (Query)  │  │   (Files)    │
+└──────────┘  └──────────┘  └──────────────┘
 ```
 
-### Workflow Explanation
-1. **Intent Classification**: Determines if query needs database access or can be answered from chat history
-2. **RAG Retrieval**: Fetches relevant schema and relationship information from ChromaDB
-3. **SQL Generation**: Uses Gemini 2.5 Flash to create optimized SQL queries
-4. **SQL Execution**: Runs query through DuckDB/SQLAlchemy hybrid engine
-5. **Analysis Router**: Decides if visualization/statistics are needed
-6. **Code Generation**: Creates Python analysis code dynamically
-7. **Execution & Upload**: Runs code, generates files, uploads to GCS
-8. **Visual Analysis**: Gemini Vision analyzes plots and provides insights
-9. **Export Check**: Handles PDF/Excel export if requested
-10. **Response Generation**: Creates formatted Markdown response with all results
+**Workflow**: 
+1. User query → Intent classification → RAG retrieval
+2. SQL generation → Execution → Result analysis
+3. Plot generation → Vision analysis → Export
+4. Markdown response with embedded visualizations
 
-## Tech Stack
+---
 
-### Backend Services
-| Technology | Purpose |
-|------------|---------|
-| **Google Cloud Run** | Serverless deployment |
-| **Google Gemini AI** | LLM & Vision analysis (2.5 Flash) |
-| **ChromaDB** | Vector database |
-| **Google Cloud Storage** | File hosting with signed URLs |
+## 🛠️ Tech Stack
 
-### Backend Framework
-- **FastAPI** - Modern web framework
-- **LangChain** - LLM application framework
-- **LangGraph** - State machine orchestration
-- **DuckDB** - In-memory analytics engine
-- **SQLAlchemy** - SQL toolkit and ORM
-- **Pandas** - Data manipulation
-- **Matplotlib** - Visualization
-- **FPDF** - PDF generation
+| Layer | Technologies |
+|-------|-------------|
+| **AI/ML** | Google Gemini 2.5 Flash, ChromaDB, LangChain, LangGraph |
+| **Backend** | FastAPI, Python 3.9+, SQLAlchemy, DuckDB, Pandas |
+| **Frontend** | React 18, Firebase (Auth/Firestore/Hosting), Tailwind CSS |
+| **Cloud** | Google Cloud Run, Google Cloud Storage |
+| **Databases** | PostgreSQL, MySQL, SQLite, CSV/Excel |
+| **Visualization** | Matplotlib, FPDF, Excel Export |
 
-### Frontend Services
-| Technology | Purpose |
-|------------|---------|
-| **Firebase Auth** | User authentication |
-| **Firebase Firestore** | Chat history storage |
-| **Firebase Hosting** | Static site hosting |
+---
 
-### Frontend Framework
-- **React 18+** - UI library
-- **Tailwind CSS** - Utility-first styling
-- **Axios** - HTTP client
-- **React Markdown** - Markdown rendering
-
-### Supported Databases
-- PostgreSQL
-- MySQL
-- SQLite
-- CSV files
-- Excel files
-- Supabase
-
-## Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
 ```bash
 python --version  # 3.9+
 node --version    # 16+
-gcloud --version
 ```
 
 ### Backend Setup
 
-#### 1. Clone Repository
+1. **Clone Repository**
 ```bash
-git clone https://github.com/yourusername/db-rag-analytics.git
-cd db-rag-analytics
+git clone https://github.com/Avneesh26024/HackCBS-8.0-.git
+cd HackCBS-8.0-
 ```
 
-#### 2. Install Dependencies
+2. **Install Dependencies**
 ```bash
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-#### 3. Configure Environment
-Create `.env` file:
+3. **Configure Environment**
+Create `.env`:
 ```env
 GOOGLE_API_KEY=your_gemini_api_key
 Open_router_embedder_API_KEY=your_openrouter_key
-GCS_BUCKET_NAME=hackcbs_generate_uri
+GCS_BUCKET_NAME=your_gcs_bucket
 ```
 
-#### 4. Run Server
+4. **Run Server**
 ```bash
 uvicorn api:app_api --host 0.0.0.0 --port 8000 --reload
 ```
-API available at: `http://localhost:8000`
-Docs: `http://localhost:8000/docs`
+API Docs: `http://localhost:8000/docs`
 
 ### Frontend Setup
 
-#### 1. Navigate to Frontend
+1. **Navigate to Frontend**
 ```bash
-cd frontend
+git clone https://github.com/JastejS28/HackCBS.git
+cd HackCBS/frontend
 npm install
 ```
 
-#### 2. Configure Firebase
-Create `src/firebase-config.js`:
-```javascript
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+2. **Configure Firebase**
+Create `src/firebase-config.js` with your Firebase credentials
 
-export const firebaseConfig = {
-  apiKey: "your_api_key",
-  authDomain: "your_project.firebaseapp.com",
-  projectId: "your_project_id",
-  storageBucket: "your_project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "your_app_id"
-};
-
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-```
-
-#### 3. Run Development Server
+3. **Run Development Server**
 ```bash
 npm start
 ```
-Frontend available at: `http://localhost:3000`
+App: `http://localhost:3000`
 
-## Project Structure
-```
-db-rag-analytics/
-├── api.py                      # FastAPI endpoints
-├── main.py                     # LangGraph workflow
-├── query_tool.py              # DataEngine
-├── embedding_manager.py       # RAG system
-├── image_result.py            # Export utilities
-├── upload_to_uri.py           # GCS uploader
-├── utils.py                   # Embeddings
-├── requirements.txt           # Dependencies
-├── db_vector_stores/          # ChromaDB data
-└── results/                   # Generated files
+---
 
+## 📡 API Endpoints
 
-```
-
-## API Endpoints
-
-### POST /upload_db
-Upload database source and build RAG system.
-
-**Request:**
+### `POST /upload_db`
+Load database and build RAG system
 ```json
 {
   "source": "postgresql://user:pass@host:port/db"
 }
 ```
 
-**Response:**
-```json
-{
-  "status": "success",
-  "message": "Data source loaded and vector stores built.",
-  "db_structure": {
-    "tables": [
-      {"name": "customers", "columns": 5, "rows": 1500, "foreign_keys": 0}
-    ],
-    "relationships": []
-  }
-}
-```
-
-### POST /chat
-Send conversational query.
-
-**Request:**
+### `POST /chat`
+Send conversational query
 ```json
 {
   "messages": [
-    {"type": "human", "content": "How many users are there?"}
+    {"type": "human", "content": "Show sales by region"}
   ]
 }
 ```
 
-**Response:**
+### `POST /3d_generate`
+Generate 3D schema visualization JSON
 ```json
 {
-  "messages": [
-    {"type": "human", "content": "How many users are there?"},
-    {"type": "ai", "content": "## Result\n\nThere are 1,500 users.\n\n**SQL:**\n```sql\nSELECT COUNT(*) FROM users\n```"}
-  ]
+  "source": "mysql://user:pass@host/db"
 }
 ```
 
-### POST /3d_generate
-Generate 3D schema visualization JSON.
+---
 
-**Request:**
-```json
-{
-  "source": "mysql://user:pass@host:port/db"
-}
-```
+## 💡 Usage Examples
 
-**Response:**
-```json
-{
-  "schema_name": "ecommerce",
-  "nodes": [{"id": "table_customers", "name": "customers", "attributes": []}],
-  "edges": []
-}
-```
+**Query**: "How many orders were placed last month?"  
+**Response**: Executes SQL, returns count with formatted results
 
-## Usage Examples
+**Query**: "Plot revenue by product category"  
+**Response**: Generates bar chart, uploads to GCS, provides visual analysis via Gemini Vision
 
-### Example 1: Basic Query
-```
-User: "How many orders were placed last month?"
-AI: 245 orders were placed last month.
-```
+**Query**: "Find anomalies in customer spending"  
+**Response**: Runs statistical analysis, highlights outliers, generates report
 
-### Example 2: Visualization
+**Query**: "Export all users to Excel"  
+**Response**: Creates Excel file, uploads to cloud, provides download link
+
+---
+
+## 🎯 Project Structure
 ```
-User: "Plot sales by category"
-AI: [Generates bar chart with breakdown]
+├── api.py                  # FastAPI endpoints
+├── main.py                 # LangGraph workflow (10-node agent)
+├── query_tool.py           # DataEngine (DuckDB + SQLAlchemy)
+├── embedding_manager.py    # RAG system (ChromaDB)
+├── image_result.py         # Plot/PDF/Excel generation
+├── upload_to_uri.py        # GCS uploader with signed URLs
+├── requirements.txt        # Python dependencies
+└── db_vector_stores/       # ChromaDB persistent storage
 ```
 
-### Example 3: Anomaly Detection
-```
-User: "Find anomalies in order amounts"
-AI: Detected 3 anomalies: Order #1523 ($15,000), Order #2891 ($0)...
-```
+---
 
-### Example 4: Export
-```
-User: "Export all users to Excel"
-AI: [Provides download link to Excel file]
-```
+## 🏆 HackCBS 8.0 Judging Criteria Alignment
 
-## Deployment
+| Criteria | Implementation |
+|----------|----------------|
+| **Technicality** | LangGraph state machine, dual-vector RAG, Gemini Vision integration, cloud deployment |
+| **Originality** | Conversational database interface, AI-powered visual analysis, multi-format exports |
+| **Practicality** | Production-ready API, 6 database types, deployed on Cloud Run, Firebase integration |
+| **Design** | Clean React UI, Markdown responses, interactive charts, intuitive conversation flow |
+| **WOW Factor** | "Talk to your database", AI explains plots, zero SQL knowledge required |
+
+---
+
+## 🌐 Deployment
 
 ### Backend (Google Cloud Run)
 ```bash
-# Build and deploy
-gcloud builds submit --tag gcr.io/PROJECT_ID/db-rag-backend
-gcloud run deploy db-rag-backend \
-  --image gcr.io/PROJECT_ID/db-rag-backend \
+gcloud builds submit --tag gcr.io/PROJECT_ID/prism-backend
+gcloud run deploy prism-backend \
+  --image gcr.io/PROJECT_ID/prism-backend \
   --platform managed \
   --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars GOOGLE_API_KEY=xxx,Open_router_embedder_API_KEY=xxx
+  --allow-unauthenticated
 ```
 
 ### Frontend (Firebase Hosting)
 ```bash
 npm run build
-firebase login
-firebase init hosting
 firebase deploy
 ```
 
-## Judging Criteria Alignment
+---
 
-### Technicality (✓)
-- Fully functional RAG system with dual vector stores
-- Complex LangGraph state machine with 10+ nodes
-- Integration of multiple AI models (Gemini LLM + Vision)
-- Real-time SQL generation and execution
-- Advanced file handling with cloud storage
+## 📄 License
 
-### Originality (✓)
-- Novel dual-collection RAG approach (schemas + relationships)
-- AI-powered visual analysis using Gemini Vision
-- Conversational database interaction paradigm
-- Automatic intent classification and routing
-
-### Practicality (✓)
-- Supports 5+ database types out-of-the-box
-- Production-ready FastAPI backend
-- Firebase-integrated React frontend
-- Real PDF/Excel export functionality
-- Deployed on Google Cloud Run
-
-### Design (✓)
-- Clean, modern React UI
-- Intuitive conversation flow
-- Professional markdown-formatted responses
-- Visual hierarchy with charts and tables
-
-### WOW Factor (✓)
-- "Talk to your database" experience
-- AI explains visualizations in natural language
-- Zero SQL knowledge required
-- One-click deployment to cloud
+MIT License - see [LICENSE](LICENSE) for details
 
 ---
 
-**Built with ❤️ for HackCBS 2024**
+## 🙏 Acknowledgments
 
-*Transform your database into a conversational AI assistant*
+Built with ❤️ for **HackCBS 8.0** by Team MI-7
+
+Special thanks to:
+- Google Cloud for infrastructure and Gemini
+- HackCBS Team for thier support
+- Major League Hacking for the opportunity
+
+---
+
+**[⬆ Back to Top](#-prism---ai-driven-database-analytics)**
