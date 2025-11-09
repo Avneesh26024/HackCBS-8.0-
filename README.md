@@ -15,10 +15,10 @@
 
 | Member | Role | GitHub |
 |--------|------|--------|
-| **Avneesh Kumar** | Backend & AI Agent | [@Avneesh26024](https://github.com/Avneesh26024) |
-| **Jastej Singh** | Frontend & UI/UX | [@JastejS28](https://github.com/JastejS28) |
-| **Aditya Sah** | Database & Infrastructure | [@adityasah](https://github.com/adityasah) |
-
+| **Avneesh** | Backend &  AI Engineer| [@Avneesh26024](https://github.com/Avneesh26024) |
+| **Jastej Singh** | Full Stack Engineer| [@JastejS28](https://github.com/JastejS28) |
+| **Aditya Channa** | Database & AI Engineer | [@aditya](https://github.com/adityachanna) |
+| **Harshit Chaudhry** | rontend & UI/UX  | [@adityasah](https://github.com/adityachanna) |
 ---
 
 ## 🎯 The Problem: Data Accessibility Crisis
